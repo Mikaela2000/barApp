@@ -1,7 +1,7 @@
 const { DataTypes } = require("sequelize");
 
 module.exports = (sequelize) => {
-    sequelize.define(
+    const Bar = sequelize.define(
         "Bar",
         {
             id: {
@@ -42,6 +42,32 @@ module.exports = (sequelize) => {
                 defaultValue: true,
             },
         },
-        { timestamps: true }
+        { 
+            timestamps: true,
+            freezeTableName: true 
+        }
     );
+
+  
+    Bar.addHook('afterUpdate', async (bar, options) => {
+        try {
+          
+            const { BarHistory } = bar.sequelize.models;
+            
+            if (BarHistory) {
+                await BarHistory.create({
+                    barId: bar.id,
+                    accion: 'UPDATE',
+                    cambios: {
+                        antes: bar._previousDataValues,
+                        despues: bar.dataValues
+                    },
+                    fecha: new Date()
+                });
+                console.log(`Historial registrado para el bar: ${bar.nombre}`);
+            }
+        } catch (error) {
+            console.error("Error en el Hook de Historial:", error.message);
+        }
+    });
 };
